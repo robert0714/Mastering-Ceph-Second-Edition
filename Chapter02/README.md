@@ -341,6 +341,20 @@ a_variable: "bar"
 
 也可以創一個all檔案放到所有的群組中，它將會套用到所有的群組；然而變數一般都會明確對應到將被改寫的群組。Ceph Ansible modules允許你設定一些預設的參數也允許你定義不同的數值在特殊的角色中。
 
+```
+vagrant@ansible:~$  sudo vi /etc/ansible/hosts
+[mon1]
+10.100.0.41
+
+[osd1]
+10.100.0.51
+
+[all]
+10.100.0.4[1:3]
+10.100.0.5[1:3]
+
+```
+
 測試
 ------------
 測試與遠端主機是否有連線成功，對mon1主機執行 ping module, 成功就會回覆 pong
@@ -422,7 +436,8 @@ vagrant@ansible:~$ sudo cp -a ceph-ansible/* /etc/ansible/
 
 ``` 
 
-vagrant@ansible:~/ceph-ansible/group_vars$ cat all.yml.sample
+vagrant@ansible:~$  cd ~/ceph-ansible/group_vars
+vagrant@ansible:~/ceph-ansible/group_vars$   cat all.yml.sample
 
 ```
 
