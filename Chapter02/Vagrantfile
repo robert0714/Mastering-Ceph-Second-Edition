@@ -1,11 +1,11 @@
 nodes = [ 
-  { :hostname => 'ansible', :ip => '192.168.0.40', :box => 'xenial64' }, 
-  { :hostname => 'mon1', :ip => '192.168.0.41', :box => 'xenial64' }, 
-  { :hostname => 'mon2', :ip => '192.168.0.42', :box => 'xenial64' }, 
-  { :hostname => 'mon3', :ip => '192.168.0.43', :box => 'xenial64' }, 
-  { :hostname => 'osd1',  :ip => '192.168.0.51', :box => 'xenial64', :ram => 1024, :osd => 'yes' }, 
-  { :hostname => 'osd2',  :ip => '192.168.0.52', :box => 'xenial64', :ram => 1024, :osd => 'yes' }, 
-  { :hostname => 'osd3',  :ip => '192.168.0.53', :box => 'xenial64', :ram => 1024, :osd => 'yes' } 
+  { :hostname => 'ansible', :ip => '10.100.0.40', :box => 'xenial64' }, 
+  { :hostname => 'mon1', :ip => '10.100.0.41', :box => 'xenial64' }, 
+  { :hostname => 'mon2', :ip => '10.100.0.42', :box => 'xenial64' }, 
+  { :hostname => 'mon3', :ip => '10.100.0.43', :box => 'xenial64' }, 
+  { :hostname => 'osd1',  :ip => '10.100.0.51', :box => 'xenial64', :ram => 1024, :osd => 'yes' }, 
+  { :hostname => 'osd2',  :ip => '10.100.0.52', :box => 'xenial64', :ram => 1024, :osd => 'yes' }, 
+  { :hostname => 'osd3',  :ip => '10.100.0.53', :box => 'xenial64', :ram => 1024, :osd => 'yes' } 
 ] 
  
 Vagrant.configure("2") do |config| 

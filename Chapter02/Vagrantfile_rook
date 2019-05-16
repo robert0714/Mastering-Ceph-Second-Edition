@@ -1,7 +1,7 @@
 nodes = [
-  { :hostname => 'kube1',  :ip => '192.168.0.51', :box => 'xenial64', :ram => 2048, :osd => 'yes' },
-  { :hostname => 'kube2',  :ip => '192.168.0.52', :box => 'xenial64', :ram => 2048, :osd => 'yes' },
-  { :hostname => 'kube3',  :ip => '192.168.0.53', :box => 'xenial64', :ram => 2048, :osd => 'yes' }
+  { :hostname => 'kube1',  :ip => '10.100.0.51', :box => 'xenial64', :ram => 2048, :osd => 'yes' },
+  { :hostname => 'kube2',  :ip => '10.100.0.52', :box => 'xenial64', :ram => 2048, :osd => 'yes' },
+  { :hostname => 'kube3',  :ip => '10.100.0.53', :box => 'xenial64', :ram => 2048, :osd => 'yes' }
 ]
 
 

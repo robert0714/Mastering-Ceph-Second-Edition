@@ -1,0 +1,17 @@
+/.idea
+/*.iml
+.vagrant
+/registry
+/registry-mirror
+/.vscode
+*.log
+*.retry
+**/.idea
+**/*.iml
+**/.vagrant
+**/registry
+**/registry-mirror
+**/*.log
+**/*.retry
+**/*.vdi
+**/.vscode
