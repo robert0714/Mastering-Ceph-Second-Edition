@@ -480,12 +480,11 @@ vagrant@ansible:~/ceph-ansible/group_vars$ cat osds.yml.sample
 1. 所有節點無密鑰登入
 1. 從github克隆Ceph Ansible模組
 1. 開始安裝
+
 group_vars
 
+建立檔案 /etc/ansible/group_vars/ceph
 ```
-
-vagrant@ansible:~$ sudo vi /etc/ansible/group_vars/ceph.yml
-
 ceph_orign: 'upstream'
 ceph_stable: true # use ceph stable branch
 ceph_stable_key: https://download.ceph.com/key/release.asc
@@ -494,11 +493,15 @@ ceph_stable_repo: "http://download.ceph.com/debian-{{ ceph_stable_release }}"
 monitor_interface: enp0s8 # Check ifconfig
 public_network: 10.100.0.0/24
 journal_size: 1024
-vagrant@ansible:~$  sudo vi /etc/ansible/group_vars/osds.yml
-</span>---
-journal_collocation: True
+
+```
+
+建立檔案 /etc/ansible/group_vars/osds
+
+```
 devices:
  - /dev/sdb
+journal_collocation: True
 
 ```
 
@@ -521,4 +524,9 @@ vagrant@ansible:~$ sudo mv site.yml.sample site.yml
 vagrant@ansible:~$ ansible-playbook -K site.yml
 
 ```
+
+Once done, assuming Ansible completed without errors, SSH into mon1 and run the following code. If Ansible did encounter errors, scroll up and look for the part which errored, the error text should give you a clue as to why it failed.
+
+vagrant@mon1:~$ sudo ceph -s:
+
 其他參考: https://github.com/ceph/ceph-ansible
