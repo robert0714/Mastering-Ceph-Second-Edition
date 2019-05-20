@@ -344,6 +344,10 @@ a_variable: "bar"
 
 也可以創一個all檔案放到所有的群組中，它將會套用到所有的群組；然而變數一般都會明確對應到將被改寫的群組。Ceph Ansible modules允許你設定一些預設的參數也允許你定義不同的數值在特殊的角色中。
 
+可以參照官方說明：
+
+http://docs.ceph.com/ceph-ansible/stable-3.0/
+
 ```
 vagrant@ansible:~$  sudo vi /etc/ansible/hosts
 [mon1]
