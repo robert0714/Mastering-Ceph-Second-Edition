@@ -242,7 +242,6 @@ $ vagrant up
 
 $ vagrant ssh ansible
 
-vagrant@ansible:~$  sudo apt-get update && sudo apt-get install ansible -y
 
 ```
 
@@ -274,10 +273,11 @@ $ vagrant up ansible mon1 osd1
 
 ```bash
 
-vagrant@ansible:~$ sudo apt-add-repository ppa:ansible/ansible
+vagrant@ansible:~$ sudo add-apt-repository --remove  ppa:ansible/ansible
+vagrant@ansible:~$ sudo apt-add-repository ppa:ansible/ansible-2.6
 ```
 透過apt更新套件和安裝ansible
-
+Ansible version must be between 2.4.x and 2.6.x!"
 ```
 
 vagrant@ansible:~$ sudo apt-get update && sudo apt-get install ansible -y
@@ -350,25 +350,24 @@ http://docs.ceph.com/ceph-ansible/stable-3.0/
 
 ```
 vagrant@ansible:~$  sudo vi /etc/ansible/hosts
-[mon1]
-10.100.0.41
 
-[osd1]
-10.100.0.51
-
-[all]
-10.100.0.4[1:3]
-10.100.0.5[1:3]
-
-[mons]
-mon1
-mon2
+[mons] 
+mon1 
+mon2 
 mon3
 
-[osds]
-osd1
-osd2
-osd3
+[mgrs]
+mon1 
+ 
+[osds] 
+osd1 
+osd2 
+osd3 
+ 
+[ceph:children] 
+mons 
+osds
+mgrs
 
 ```
 
@@ -430,24 +429,18 @@ vagrant@ansible:~$ ansible-playbook /etc/ansible/playbook.yml
 
 vagrant@ansible:~$ git clone https://github.com/ceph/ceph-ansible.git
 
-vagrant@ansible:~$ git checkout $branch
+vagrant@ansible:~$ cd ceph-ansible
 
-```
-# Releases
+vagrant@ansible:~/ceph-ansible$ git checkout stable-3.2
 
-The following branches should be used depending on your requirements. The stable-* branches have been QE tested and sometimes recieve backport fixes throughout their lifecycle. The master branch should be considered experimental and used with caution.
-
-* stable-2.1 Support for ceph version jewel. This branch supports ansible versions 2.1 and 2.2.1.
-* stable-2.2 Support for ceph versions jewel and kraken. This branch supports ansible versions 2.1 and 2.2.2.
-* stable-3.0 Support for ceph versions jewel and luminous. This branch supports ansible versions 2.3.1, 2.3.2 and 2.4.2.
-* master Support for ceph versions jewel, and luminous. This branch supports ansible version 2.4.2.
-
- 
+``` 
 複製下載的資源庫到本地的/etc/ansible目錄
 
 ```
 
-vagrant@ansible:~$ sudo cp -a ceph-ansible/* /etc/ansible/
+vagrant@ansible:~$  sudo cp -a ceph-ansible/* /etc/ansible/
+vagrant@ansible:~$  sudo apt-get install python-pip
+vagrant@ansible:~$  sudo pip install notario netaddr
 
 ```
 
@@ -467,18 +460,61 @@ vagrant@ansible:~$ sudo cp -a ceph-ansible/* /etc/ansible/
 vagrant@ansible:~$  cd ~/ceph-ansible/group_vars
 vagrant@ansible:~/ceph-ansible/group_vars$   cat all.yml.sample
 
+    #mon_group_name: mons
+    #osd_group_name: osds
+    #rgw_group_name: rgws
+    #mds_group_name: mdss
+    #nfs_group_name: nfss
+    ...
+    #iscsi_group_name: iscsigws
 ```
 
-表示控制哪些群組模組使用哪些Ceph主機
+表示控制哪些群組模組使用哪些Ceph主機:
+
+```
+#ceph_origin: 'upstream' # or 'distro' or 'local'
+```
 
 上圖表示可以選擇使用套件是要用社群、本地、或者是發行版
 
+```
+
+#fsid: "{{ cluster_uuid.stdout }}"
+#generate_fsid: true
+
+```
+
 說明預設一個fsid會自動產生，而且存在一個檔案內，不應該改變它。除非你想要控制fsid透過硬體編碼
+
+```
+
+#monitor_interface: interface
+#monitor_address: 0.0.0.0
+
+```
 
 上圖說明Monitor的選項，interface是mon主機顯示的網路介面名稱，還有IP和子網遮罩
 
+
+```
+
+#ceph_conf_overrides: {}
+
+```
+
 並不是所有變量均由ceph管理，但是這邊讓你可以定義任何額外的變量到ceph.conf
 
+```
+
+    ceph_conf_overrides:
+      global:
+        variable1: value
+      mon:
+        variable2: value
+      osd:
+        variable3: value
+
+```
 格式大概如上
 
 檢視OSD變量範例
@@ -487,9 +523,21 @@ vagrant@ansible:~/ceph-ansible/group_vars$   cat all.yml.sample
 ```
 vagrant@ansible:~/ceph-ansible/group_vars$ cat osds.yml.sample
 
+#copy_admin_key: false
+
 ```
 
 如果想要管理Ceph叢集中的OSD，不是只有管理Monitors，要設定true
+
+```
+
+ #devices: []
+ #osd_auto_discovery: false
+ #journal_collocation: false
+ #raw_multi_journal: false
+ #raw_journal_devices: []
+
+```
 
 控制什麼硬碟當做OSD，日誌要如何放置
 
@@ -513,12 +561,14 @@ group_vars
 
 建立檔案 /etc/ansible/group_vars/ceph
 ```
-ceph_orign: 'upstream'
+ceph_origin: 'repository'
+ceph_repository: 'community'
+ceph_mirror: http://download.ceph.com
 ceph_stable: true # use ceph stable branch
-ceph_stable_key: https://download.ceph.com/key/release.asc
-ceph_stable_release: jewel # ceph stable release
-ceph_stable_repo: "http://download.ceph.com/debian-{{ ceph_stable_release }}"
-monitor_interface: enp0s8 # Check ifconfig
+ceph_stable_key: https://download.ceph.com/keys/release.asc
+ceph_stable_release: mimic # ceph stable release
+ceph_stable_repo: "{{ ceph_mirror }}/debian-{{ ceph_stable_release }}"
+monitor_interface: eth1 #Check ifconfig
 public_network: 10.100.0.0/24
 journal_size: 1024
 
@@ -527,9 +577,9 @@ journal_size: 1024
 建立檔案 /etc/ansible/group_vars/osds
 
 ```
-devices:
- - /dev/sdb
-journal_collocation: True
+osd_scenario: lvm
+lvm_volumes:
+- data: /dev/sdb
 
 ```
 
@@ -548,8 +598,8 @@ vagrant@ansible:~$ sudo chown vagrant /etc/ansible/fetch
 ```
 
 vagrant@ansible:~$ cd /etc/ansible
-vagrant@ansible:~$ sudo mv site.yml.sample site.yml
-vagrant@ansible:~$ ansible-playbook -K site.yml
+vagrant@ansible:/etc/ansible$ sudo mv site.yml.sample site.yml
+vagrant@ansible:/etc/ansible$ ansible-playbook -K site.yml
 
 ```
 
@@ -575,3 +625,368 @@ Deployment from scratch on bare metal machines: https://youtu.be/E8-96NamLDo
 ## Bare metal demo
 
 Deployment from scratch on bare metal machines: https://youtu.be/dv_PEp9qAqg
+
+
+Ceph in containers
+====================
+We have seen previously that by using orchestration tools such as Ansible we can reduce the work required to deploy, manage, and maintain a Ceph cluster. We have also seen how these tools can help you discover available hardware resources and deploy Ceph to them.
+
+However, using Ansible to configure bare-metal servers still results in a very static deployment, possibly not best suited for today's more dynamic workloads. Designing Ansible playbooks also needs to take into account several different Linux distributions and also any changes that may occur between different releases; systemd is a great example of this. Furthermore, a lot of development in orchestration tools needs to be customized to handle discovering, deploying, and managing Ceph. This is a common theme that the Ceph developers have thought about; with the use of Linux containers and their associated orchestration platforms, they hope to improve Ceph's deployment experience.
+
+One such approach, which has been selected as the preferred option, is to join forces with a project called Rook. Rook works with the container management platform Kubernetes to automate the deployment, configuration, and consumption of Ceph storage. If you were to draw up a list of requirements and features which a custom Ceph orchestration and management framework would need to implement, you would likely design something which functions in a similar fashion to Kubernetes. So it makes sense to build functionality on top of the well-established Kubernetes project, and Rook does exactly that.
+
+One major benefit of running Ceph in containers is that is allows collocation of services on the same hardware. Traditionally in Ceph clusters it was expected that Ceph monitors would run on dedicated hardware; when utilizing containers this requirement is removed. For smaller clusters, this can amount to a large saving in the cost of running and purchasing servers. If resources permit, other container-based workloads could also be allowed to run across the Ceph hardware, further increasing the Return on Investment for the hardware purchase. The use of Docker containers reserves the required hardware resources so that workloads cannot impact each other.
+
+To better understand how these two technologies work with Ceph, we first need to cover Kubernetes in more detail and actual containers themselves.
+
+# Containers
+Although containers in their current form are a relatively new technology, the principle of isolating sets of processes from each other has been around for a long time. What the current set of technologies enhances is the completeness of the isolation. Previous technologies maybe only isolated parts of the filesystem, whereas the latest container technologies also isolate several areas of the operating system and can also provide quotas for hardware resources. One technology in particular, Docker, has risen to become the most popular technology when talking about containers, so much so that the two words are often used interchangeably. The word container describes a technology that performs operating system-level virtualization. Docker is a software product that controls primarily Linux features such as groups and namespaces to isolate sets of Linux processes.
+
+It's important to note that, unlike full-blown virtualization solutions such as VMWare, Hyper-V, and KVM, which provides virtualized hardware and require a separate OS instance, containers utilize the operating system of the host. The full OS requirements of virtual machines may lead to several 10s of GB of storage being wasted on the operating system installation and potentially several GB of RAM as well. Containers typically consume overheads of storage and RAM measured in MB, meaning that a lot more containers can be squeezed onto the same hardware when compared to full virtualization technologies.
+
+# Kubernetes
+
+The ability to quickly and efficiently spin up 10's of containers in seconds soon makes you realize that. if VM sprawl was bad enough, with containers the problem can easily get a whole lot worse. With the arrival of Docker in the modern IT infrastructure, a need to manage all these containers arose. Enter Kubernetes.
+
+Although several container orchestration technologies are available, Kubernetes has enjoyed wide-ranging success and, as it is the product on which Rook is built, this book will focus on it.
+
+Kubernetes is an open source container-orchestration system for automating the deployment, scaling, and management of containerized applications. It was originally developed at Google to run their internal systems but has since been open sourced and seen its popularity flourish.
+
+Although this chapter will cover deploying an extremely simple Kubernetes cluster to deploy a Ceph cluster with Rook, it is not meant to be a full tutorial and readers are encouraged to seek other resources in order to learn more about Kubernetes.
+
+## Deploying a Ceph cluster with Rook
+
+To deploy a Ceph cluster with Rook and Kubernetes, Vagrant will be used to create three VMs that will run the Kubernetes cluster.
+
+The first task you'll complete is the deployment of three VMs via Vagrant. If you have followed the steps at that start of this chapter and used Vagrant to build an environment for Ansible, then you should have everything you require to deploy VMs for the Kubernetes cluster.
+
+The following is the Vagrantfile to bring up three VMs; as before, place the contents into a file called Vagrantfile in a new directory and then run vagrant up:
+
+```
+
+nodes = [
+  { :hostname => 'kube1',  :ip => '192.168.0.51', :box => 'xenial64', :ram => 2048, :osd => 'yes' },
+  { :hostname => 'kube2',  :ip => '192.168.0.52', :box => 'xenial64', :ram => 2048, :osd => 'yes' },
+  { :hostname => 'kube3',  :ip => '192.168.0.53', :box => 'xenial64', :ram => 2048, :osd => 'yes' }
+]
+
+
+Vagrant.configure("2") do |config|
+  nodes.each do |node|
+    config.vm.define node[:hostname] do |nodeconfig|
+      nodeconfig.vm.box = "bento/ubuntu-16.04"
+      nodeconfig.vm.hostname = node[:hostname]
+      nodeconfig.vm.network :private_network, ip: node[:ip]
+
+
+      memory = node[:ram] ? node[:ram] : 4096;
+      nodeconfig.vm.provider :virtualbox do |vb|
+        vb.customize [
+          "modifyvm", :id,
+          "--memory", memory.to_s,
+        ]
+        if node[:osd] == "yes"        
+          vb.customize [ "createhd", "--filename", "disk_osd-#{node[:hostname]}", "--size", "10000" ]
+          vb.customize [ "storageattach", :id, "--storagectl", "SATA Controller", "--port", 3, "--device", 0, "--type", "hdd", "--medium", "disk_osd-#{node[:hostname]}.vdi" ]
+        end
+      end
+    end
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_guest = true
+  end
+end
+
+```
+SSH in to the first VM, Kube1:
+
+```bash
+
+vagrant ssh kube1
+
+```
+
+Update the kernel to a newer version; this is required for certain Ceph features in Rook to function correctly:
+
+```
+
+sudo apt-get install linux-generic-hwe-16.04
+
+```
+
+Install Docker, as follows:
+
+```
+
+sudo apt-get install docker.io
+
+```
+
+Enable and start the Docker service, as follows:
+
+```
+
+sudo systemctl start docker
+sudo systemctl enable docker
+
+```
+
+Disable swap for future boots by editing /etc/fstab and commenting out the swap line:
+
+And also disable swap now, as follows:
+
+```
+
+sudo swapoff -a
+
+```
+
+Add the Kubernetes repository, as follows:
+
+sudo add-apt-repository “deb http://apt.kubernetes.io/ kubernetes-xenial main”
+
+Add the Kubernetes GPG key, as follows:
+
+```
+
+sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+```
+
+Install Kubernetes, as follows:
+
+```
+
+sudo apt-get update && sudo apt-get install -y kubeadm kubelet kubectl
+
+```
+
+Repeat the installation steps for Docker and Kubernetes on both the kube2 and kube3 VMs.
+
+Once all the VMs have a working copy of Docker and Kubernetes, we can now initialize the Kubernetes cluster:
+
+```
+
+sudo kubeadm init --apiserver-advertise-address=192.168.0.51 --pod-network-cidr=10.1.0.0/16 --ignore-preflight-errors=NumCPU
+
+```
+
+
+At the end of the process, a command string is output; make a note of this as it is needed to join our additional nodes to the cluster. An example of this is as follows:
+
+
+Now that we have installed Docker and Kubernetes on all our nodes and have initialized the master, let's add the remaining two nodes into the cluster. Remember that string of text you were asked to note down? Now we can run it on the two remaining nodes:
+
+```
+
+sudo kubeadm join 192.168.0.51:6443 --token c68o8u.92pvgestk26za6md --discovery-token-ca-cert-hash sha256:3954fad0089dcf72d0d828b440888b6e97465f783bde403868f098af67e8f073
+
+```
+
+
+```
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+```
+
+
+We can now install some additional container networking support. Flannel, a simple networking add-on for Kubernetes, uses VXLAN as an overlay to enable container-to-container networking. First download the yaml file from GitHub:
+
+```
+
+wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+```
+
+Before we install the Flannel networking component, we need to make a few changes to the YAML spec file:
+
+```
+
+nano kube-flannel.yml
+
+```
+
+We need to find the following lines and make the required changes, as follows:
+
+Line 76: "Network": "10.1.0.0/16":
+
+Line 126: - --iface=eth1:
+
+Now we can issue the relevant Kubernetes command to apply the specification file and install Flannel networking:
+
+```
+
+kubectl apply -f kube-flannel.yml
+
+```
+
+After networking has been installed, we can confirm everything is working and that our Kubernetes worker nodes are ready to run workloads:
+
+```
+
+$ kubectl get nodes
+
+```
+Now let's also check that all containers that support internal Kubernetes services are running:
+
+```
+
+$ kubectl get pods --all-namespaces –o wide
+
+```
+Note that the container networking service (Flannel) that we installed in the previous step has automatically been deployed  across all three nodes. At this point, we have a fully functioning Kubernetes cluster that is ready to run whatever containers we wish to run on it.
+
+We can now deploy Rook into the Kubernetes cluster. First, let's clone the Rook project from GitHub:
+
+```
+
+$ git clone https://github.com/rook/rook.git
+
+```
+
+
+Change to the examples directory, as follows:
+
+```
+
+$ cd rook/cluster/examples/kubernetes/ceph/
+
+```
+
+And now finally create the Rook-powered Ceph cluster by running the following two commands:
+
+```
+
+$ kubectl create -f operator.yaml
+
+```
+
+```
+
+$ kubectl create -f cluster.yaml
+
+```
+
+To confirm our Rook cluster is now working, let's check the running containers under the Rook namespace:
+
+```
+
+$ kubectl get pods --all-namespaces -o wide
+
+```
+
+You will see that Rook has deployed a couple of mons and has also started some discover containers. These discover containers run a discovery script to locate storage devices attached to the Kubernetes physical host. Once the discovery process has completed for the first time, Kubernetes will then run a one-shot container to prepare the OSD by formatting the disk and adding the OSD into the cluster. If you wait a few minutes and re-run the get pods command, you should hopefully see that Rook has detected the two disks connected to kube2 and kube3 and created osd containers for them:
+
+To interact with the cluster, let's deploy the toolbox container; this is a simple container containing the Ceph installation and the necessary cluster keys:
+
+```
+
+$ kubectl create -f toolbox.yaml
+
+```
+
+Now execute bash in the toolbox container:
+
+```
+
+kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
+
+```
+
+This will present you with a root shell running inside the Ceph toolbox container, where we can check the status of the Ceph cluster by running ceph –s and see the current OSDs with ceph osd tree:
+
+You will notice that, although we built three VMs, Rook has only deployed OSDs on kube2 and kube3. This is because by default Kubernetes will not schedule containers to run on the master node; in a production cluster this is the desired behavior, but for testing we can remove this limitation.
+
+Exit back to the master Kubernetes node and run the following:
+
+```
+
+kubectl taint nodes $(hostname) node-role.kubernetes.io/master:NoSchedule-node/kube1 untained
+
+```
+
+You will notice that Kubernetes will deploy a couple of new containers onto kube1, but it won't deploy any new OSDs; this is due to a current limitation to the effect that the rook-ceph-operator component only deploys new OSDs on first startup. In order to detect newly available disks and prepare them as OSDs, the rook-ceph-operator container needs to be deleted.
+
+Run the following command, but replace the container name with the one that is listed from the get pods command:
+
+```
+
+kubectl -n rook-ceph-system delete pods rook-ceph-operator-7dd46f4549-68tnk
+
+```
+
+Kubernetes will now automatically spin up a new rook-ceph-operator container and in doing so will kick-start the deployment of the new osd; this can be confirmed by looking at the list of running containers again:
+
+
+You can see kube1 has run a rook-discover container, a rook-ceph-osd-prepare, and finally a rook-ceph-osd container, which in this case is osd number 2.
+
+We can also check, by using our toolbox container as well, that the new osd has joined the cluster successfully:
+
+
+Now that Rook has deployed our full test Ceph cluster, we need to make use of it and create some RADOS pools and also consume some storage with a client container. To demonstrate this process, we will deploy a CephFS filesystem.
+
+Before we jump straight into deploying the filesystem, let's first have a look at the example yaml file we will be deploying. Make sure you are still in the ~/rook/cluster/examples/kubernetes/ceph directory and use a text editor to view the filesystem.yaml file:
+
+You can see that the file contents describe the RADOS pools that will be created and the MDS instances that are required for the filesystem. In this example, three pools will be deployed, two replicated and one erasure-coded for the actual data. Two MDS servers will be deployed, one running as active and the other running as a standby-replay.
+
+Exit the text editor and now deploy the CephFS configuration in the yaml file:
+
+
+```
+
+$ kubectl create -f filesystem.yaml
+
+```
+
+Now let's jump back into our toolbox container, check the status, and see what's been created:
+
+We can see that two pools have been created, one for the CephFS metadata and one for the actual data stored on the CephFS filesystem.
+
+To give an example of how Rook can then be consumed by application containers, we will now deploy a small NGINX web server container that stores its HTML content on the CephFS filesystem.
+
+Place the following inside a file called nginx.yaml:
+
+```
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: nginx
+spec:
+ containers:
+ - name: nginx
+ image: nginx:1.7.9
+ ports:
+ - containerPort: 80
+ volumeMounts:
+ - name: www
+ mountPath: /usr/share/nginx/html
+ volumes:
+ - name: www
+ flexVolume:
+ driver: ceph.rook.io/rook
+ fsType: ceph
+ options:
+ fsName: myfs
+ clusterNamespace: rook-ceph
+
+```
+And now use the kubectl command to create the pod/nginx:
+
+
+
+After a while, the container will be started and will enter a running state; use the get pods command to verify this:
+
+
+
+We can now start a quick Bash shell on this container to confirm the CephFS mount has worked:
+
+```
+
+$ kubectl exec -it nginx bash
+
+```
+
+We can see that the CephFS filesystem has been mounted into /usr/share/nginx/html. This has been done without having to install any Ceph components in the container and without any configuration or copying of key rings. Rook has taken care of all of this behind the scenes; once this is understood and appreciated, the real power of Rook can be seen. If the simple NGINX pod example is expanded to become an auto-scaling service that spins up multiple containers based on load, the flexibility given by Rook and Ceph to automatically present the same shared storage across the web farm with no additional configuration is very useful.
