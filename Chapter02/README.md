@@ -360,6 +360,16 @@ vagrant@ansible:~$  sudo vi /etc/ansible/hosts
 10.100.0.4[1:3]
 10.100.0.5[1:3]
 
+[mons]
+mon1
+mon2
+mon3
+
+[osds]
+osd1
+osd2
+osd3
+
 ```
 
 測試
@@ -420,7 +430,18 @@ vagrant@ansible:~$ ansible-playbook /etc/ansible/playbook.yml
 
 vagrant@ansible:~$ git clone https://github.com/ceph/ceph-ansible.git
 
+vagrant@ansible:~$ git checkout $branch
+
 ```
+# Releases
+
+The following branches should be used depending on your requirements. The stable-* branches have been QE tested and sometimes recieve backport fixes throughout their lifecycle. The master branch should be considered experimental and used with caution.
+
+* stable-2.1 Support for ceph version jewel. This branch supports ansible versions 2.1 and 2.2.1.
+* stable-2.2 Support for ceph versions jewel and kraken. This branch supports ansible versions 2.1 and 2.2.2.
+* stable-3.0 Support for ceph versions jewel and luminous. This branch supports ansible versions 2.3.1, 2.3.2 and 2.4.2.
+* master Support for ceph versions jewel, and luminous. This branch supports ansible version 2.4.2.
+
  
 複製下載的資源庫到本地的/etc/ansible目錄
 
@@ -537,3 +558,20 @@ Once done, assuming Ansible completed without errors, SSH into mon1 and run th
 vagrant@mon1:~$ sudo ceph -s:
 
 其他參考: https://github.com/ceph/ceph-ansible
+
+# Testing
+
+Documentation for writing functional testing scenarios for ceph-ansible.
+
+* Testing with ceph-ansible[http://docs.ceph.com/ceph-ansible/stable-3.0/testing/index.html]
+* Glossary[http://docs.ceph.com/ceph-ansible/stable-3.0/testing/glossary.html]
+
+# Demos
+
+## Vagrant Demos
+
+Deployment from scratch on bare metal machines: https://youtu.be/E8-96NamLDo
+
+## Bare metal demo
+
+Deployment from scratch on bare metal machines: https://youtu.be/dv_PEp9qAqg
