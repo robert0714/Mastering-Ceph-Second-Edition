@@ -605,7 +605,11 @@ vagrant@ansible:/etc/ansible$ ansible-playbook -K site.yml
 
 Once done, assuming Ansible completed without errors, SSH into mon1 and run the following code. If Ansible did encounter errors, scroll up and look for the part which errored, the error text should give you a clue as to why it failed.
 
-vagrant@mon1:~$ sudo ceph -s:
+```bash
+
+vagrant@mon1:~$ sudo ceph -s
+
+```
 
 其他參考: https://github.com/ceph/ceph-ansible
 
