@@ -239,7 +239,10 @@ Installation
 ```bash
 
 $ vagrant up
+
 $ vagrant ssh ansible
+
+vagrant@ansible:~$  sudo apt-get update && sudo apt-get install ansible -y
 
 ```
 
