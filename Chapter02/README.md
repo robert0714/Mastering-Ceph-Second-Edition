@@ -439,7 +439,10 @@ vagrant@ansible:~/ceph-ansible$ git checkout stable-3.2
 ```
 
 vagrant@ansible:~$  sudo cp -a ceph-ansible/* /etc/ansible/
-vagrant@ansible:~$  sudo apt-get install python-pip
+vagrant@ansible:~$  export LCi_ALL="en_US.UTF-8"
+vagrant@ansible:~$  export LC_CTYPE="en_US.UTF-8"
+vagrant@ansible:~$  sudo dpkg-reconfigure locales
+vagrant@ansible:~$  sudo apt-get install -y  python-pip
 vagrant@ansible:~$  sudo pip install notario netaddr
 
 ```
