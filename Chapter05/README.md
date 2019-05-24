@@ -213,3 +213,182 @@ vagrant@mon3:~$ sudo radosgw-admin user create --uid=robert0714 --display-name="
 
 
 ```
+
+Note the output from the command, particularly the access_key and secret_key, these are used with S3 clients to authenticate with the RGW.
+
+To upload objects to our S3-capable Ceph cluster, we first need to create an S3 bucket. We will use the s3cmd tool to do this, which is shown as follows:
+
+```bash
+
+vagrant@mon3:~$ sudo apt-get install s3cmd
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following additional packages will be installed:
+  file libmagic1 python-dateutil python-magic
+The following NEW packages will be installed:
+  python-dateutil python-magic s3cmd
+The following packages will be upgraded:
+  file libmagic1
+2 upgraded, 3 newly installed, 0 to remove and 107 not upgraded.
+Need to get 378 kB of archives.
+After this operation, 683 kB of additional disk space will be used.
+Do you want to continue? [Y/n] Y
+Get:1 http://archive.ubuntu.com/ubuntu xenial-updates/main amd64 file amd64 1:5.25-2ubuntu1.2 [21.2 kB]
+Get:2 http://archive.ubuntu.com/ubuntu xenial-updates/main amd64 libmagic1 amd64 1:5.25-2ubuntu1.2 [216 kB]
+Get:3 http://archive.ubuntu.com/ubuntu xenial/main amd64 python-dateutil all 2.4.2-1 [42.5 kB]
+Get:4 http://archive.ubuntu.com/ubuntu xenial-updates/universe amd64 python-magic all 1:5.25-2ubuntu1.2 [5382 B]
+Get:5 http://archive.ubuntu.com/ubuntu xenial/universe amd64 s3cmd all 1.6.1-1 [92.6 kB]
+Fetched 378 kB in 1s (189 kB/s)
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+	LANGUAGE = "en_US:",
+	LC_ALL = (unset),
+	LC_TIME = "zh_TW.UTF-8",
+	LC_MONETARY = "zh_TW.UTF-8",
+	LC_MEASUREMENT = "zh_TW.UTF-8",
+	LC_NUMERIC = "zh_TW.UTF-8",
+	LC_PAPER = "zh_TW.UTF-8",
+	LANG = "en_US.UTF-8"
+    are supported and installed on your system.
+perl: warning: Falling back to a fallback locale ("en_US.UTF-8").
+locale: Cannot set LC_ALL to default locale: No such file or directory
+(Reading database ... 42461 files and directories currently installed.)
+Preparing to unpack .../file_1%3a5.25-2ubuntu1.2_amd64.deb ...
+Unpacking file (1:5.25-2ubuntu1.2) over (1:5.25-2ubuntu1.1) ...
+Preparing to unpack .../libmagic1_1%3a5.25-2ubuntu1.2_amd64.deb ...
+Unpacking libmagic1:amd64 (1:5.25-2ubuntu1.2) over (1:5.25-2ubuntu1.1) ...
+Selecting previously unselected package python-dateutil.
+Preparing to unpack .../python-dateutil_2.4.2-1_all.deb ...
+Unpacking python-dateutil (2.4.2-1) ...
+Selecting previously unselected package python-magic.
+Preparing to unpack .../python-magic_1%3a5.25-2ubuntu1.2_all.deb ...
+Unpacking python-magic (1:5.25-2ubuntu1.2) ...
+Selecting previously unselected package s3cmd.
+Preparing to unpack .../archives/s3cmd_1.6.1-1_all.deb ...
+Unpacking s3cmd (1.6.1-1) ...
+Processing triggers for man-db (2.7.5-1) ...
+Processing triggers for libc-bin (2.23-0ubuntu10) ...
+Setting up libmagic1:amd64 (1:5.25-2ubuntu1.2) ...
+Setting up file (1:5.25-2ubuntu1.2) ...
+Setting up python-dateutil (2.4.2-1) ...
+Setting up python-magic (1:5.25-2ubuntu1.2) ...
+Setting up s3cmd (1.6.1-1) ...
+Processing triggers for libc-bin (2.23-0ubuntu10) ...
+
+```
+
+Now that s3cmd is installed, it needs to be configured to point at our RGW server; it has a built-in configuration tool that can be used to generate the initial configuration. During the configuration wizard, it will prompt for the access key and secret that was generated when the user account was created, which is shown as follows:
+
+```bash
+
+vagrant@mon3:~$ s3cmd --configure
+
+Enter new values or accept defaults in brackets with Enter.
+Refer to user manual for detailed description of all options.
+
+Access key and Secret key are your identifiers for Amazon S3. Leave them empty for using the env variables.
+Access Key: 2BEC31S1HB2CU84D8ZGB
+Secret Key: 1lXm4xf4yGvqjoZvWTnlCMGudfB2vCFsJ630IkNR
+Default Region [US]:
+
+Encryption password is used to protect your files from reading
+by unauthorized persons while in transfer to S3
+Encryption password: 
+Path to GPG program [/usr/bin/gpg]: 
+
+When using secure HTTPS protocol all communication with Amazon S3
+servers is protected from 3rd party eavesdropping. This method is
+slower than plain HTTP, and can only be proxied with Python 2.7 or newer
+Use HTTPS protocol [Yes]: No
+
+On some networks all internet access must go through a HTTP proxy.
+Try setting it here if you can't connect to S3 directly
+HTTP Proxy server name: 
+
+New settings:
+  Access Key: 2BEC31S1HB2CU84D8ZGB
+  Secret Key: 1lXm4xf4yGvqjoZvWTnlCMGudfB2vCFsJ630IkNR
+  Default Region: US
+  Encryption password: 
+  Path to GPG program: /usr/bin/gpg
+  Use HTTPS protocol: False
+  HTTP Proxy server name: 
+  HTTP Proxy server port: 0
+
+Test access with supplied credentials? [Y/n] Y
+Please wait, attempting to list all buckets...
+ERROR: Test failed: 403 (InvalidAccessKeyId): The AWS Access Key Id you provided does not exist in our records.
+
+Retry configuration? [Y/n] n
+
+Save settings? [y/N] y
+Configuration saved to '/home/vagrant/.s3cfg'
+
+
+```
+
+The generated configuration will be pointing to Amazon's S3 service; the generated configuration file needs to be edited and a few options modified. Edit the .s3cfg file in your Linux user's home directory and make the following changes:
+
+```bash
+
+vagrant@mon3:~$ vi /home/vagrant/.s3cfg 
+
+```
+
+Comment out the bucket_location variable:
+
+```
+
+[default]
+access_key = 2BEC31S1HB2CU84D8ZGB
+access_token =
+add_encoding_exts =
+add_headers =
+#bucket_location = US
+
+```
+
+Change the host_base and host_buckets to match the address of the RGW:
+
+```bash
+
+host_base = mon3:8080
+host_bucket = mon3:8080
+
+```
+
+Save the file and quit back to the shell; s3cmd can now be used to manipulate your s3 storage. The following example will create a test bucket where objects can be uploaded:
+
+```bash
+
+vagrant@mon3:~$ s3cmd mb s3://test
+Bucket 's3://test/' created
+
+vagrant@mon3:~$ man s3cmd 
+man: can't set the locale; make sure $LC_* and $LANG are correct
+
+vagrant@mon3:~$ s3cmd ls s3://test
+vagrant@mon3:~$ s3cmd la
+
+```
+
+You now have a fully functional S3-compatible storage platform ready to explore the world of object storage.
+
+### Summary
+
+In this chapter, you learned about the differences between replicated and erasure-coded pools, and their strengths and weaknesses. Armed with this information, you should now be capable of making the best decision when it comes to deciding between replicated and erasure pools. You also have a more in-depth understanding of how erasure-coded pools function, which will aid planning and operations.
+
+You should now feel confident in deploying Ceph clusters to provide block, file, and object storage, and be able to demonstrate regular administrative tasks.
+
+In the next chapter, we will learn about librados and how to use it to make custom applications that talk directly to Ceph.
+
+### Questions
+1. Name two different erasure-coding techniques.
+1. What is the process called when an erasure-coded pool does a partial write to an object?
+1. Why might you choose an erasure-coded profile with two parity shards?
+1. What is the process called to turn a cloned snapshot into a full-fat RBD image?
+1. What Ceph daemon is required to run a CephFS filesystem?
+1. Why might you choose to run multiple active metadata servers over a single one in a CephFS filesystem?
+1. What Ceph daemon is required to run a RGW?
+1. What two APIs is Ceph's RGW capable of supporting?
