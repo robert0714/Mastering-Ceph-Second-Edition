@@ -709,7 +709,7 @@ Update the kernel to a newer version; this is required for certain Ceph features
 
 ```
 
-sudo apt-get install linux-generic-hwe-16.04
+sudo apt-get update && sudo apt-get install linux-generic-hwe-16.04
 
 ```
 
@@ -766,7 +766,7 @@ Once all the VMs have a working copy of Docker and Kubernetes, we can now initia
 
 ```
 
-sudo kubeadm init --apiserver-advertise-address=192.168.0.51 --pod-network-cidr=10.1.0.0/16 --ignore-preflight-errors=NumCPU
+sudo kubeadm init --apiserver-advertise-address=10.100.0.51 --pod-network-cidr=10.1.0.0/16 --ignore-preflight-errors=NumCPU
 
 ```
 
@@ -785,9 +785,9 @@ sudo kubeadm join 192.168.0.51:6443 --token c68o8u.92pvgestk26za6md --discovery-
 
 ```
 
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+$ mkdir -p $HOME/.kube
+$ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+$ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 ```
 
@@ -796,7 +796,16 @@ We can now install some additional container networking support. Flannel, a simp
 
 ```
 
-wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+$ wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+--2019-06-13 13:02:56--  https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 151.101.76.133
+Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|151.101.76.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 12306 (12K) [text/plain]
+Saving to: 'kube-flannel.yml'
+
+100%[================================================================================================================================================================================================================================================>] 12,306      --.-K/s   in 0s      
 
 ```
 
@@ -804,7 +813,7 @@ Before we install the Flannel networking component, we need to make a few change
 
 ```
 
-nano kube-flannel.yml
+$ nano kube-flannel.yml
 
 ```
 
@@ -818,7 +827,18 @@ Now we can issue the relevant Kubernetes command to apply the specification file
 
 ```
 
-kubectl apply -f kube-flannel.yml
+$ kubectl apply -f kube-flannel.yml
+
+podsecuritypolicy.extensions/psp.flannel.unprivileged created
+clusterrole.rbac.authorization.k8s.io/flannel created
+clusterrolebinding.rbac.authorization.k8s.io/flannel created
+serviceaccount/flannel created
+configmap/kube-flannel-cfg created
+daemonset.extensions/kube-flannel-ds-amd64 created
+daemonset.extensions/kube-flannel-ds-arm64 created
+daemonset.extensions/kube-flannel-ds-arm created
+daemonset.extensions/kube-flannel-ds-ppc64le created
+daemonset.extensions/kube-flannel-ds-s390x created
 
 ```
 
@@ -828,12 +848,35 @@ After networking has been installed, we can confirm everything is working and th
 
 $ kubectl get nodes
 
+NAME     STATUS   ROLES    AGE     VERSION
+k8s-m1   Ready    master   2d21h   v1.14.0
+k8s-n1   Ready    <none>   2d21h   v1.14.0
+k8s-n2   Ready    <none>   2d21h   v1.14.0
+
 ```
 Now let's also check that all containers that support internal Kubernetes services are running:
 
 ```
 
-$ kubectl get pods --all-namespaces –o wide
+$ kubectl get pods --all-namespaces -o wide
+
+NAMESPACE      NAME                                       READY   STATUS      RESTARTS   AGE     IP               NODE     NOMINATED NODE   READINESS GATES
+kube-system    calico-etcd-zxf69                          1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    calico-kube-controllers-866bb996d6-skhxr   1/1     Running     1          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    calico-node-2fkw6                          2/2     Running     2          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    calico-node-dxsvn                          2/2     Running     0          2d20h   192.168.57.162   k8s-n2   <none>           <none>
+kube-system    calico-node-fdg58                          2/2     Running     1          2d20h   192.168.57.161   k8s-n1   <none>           <none>
+kube-system    coredns-fb8b8dccf-dt9xk                    1/1     Running     0          2d20h   10.244.215.66    k8s-n1   <none>           <none>
+kube-system    coredns-fb8b8dccf-fb5cm                    1/1     Running     0          2d20h   10.244.215.65    k8s-n1   <none>           <none>
+kube-system    etcd-k8s-m1                                1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-apiserver-k8s-m1                      1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-controller-manager-k8s-m1             1/1     Running     1          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-proxy-klkjx                           1/1     Running     0          2d20h   192.168.57.161   k8s-n1   <none>           <none>
+kube-system    kube-proxy-mxzwv                           1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-proxy-pfp84                           1/1     Running     0          2d20h   192.168.57.162   k8s-n2   <none>           <none>
+kube-system    kube-scheduler-k8s-m1                      1/1     Running     1          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kubernetes-dashboard-5f7b999d65-l6cmh      1/1     Running     0          2d20h   10.244.42.131    k8s-m1   <none>           <none>
+
 
 ```
 Note that the container networking service (Flannel) that we installed in the previous step has automatically been deployed  across all three nodes. At this point, we have a fully functioning Kubernetes cluster that is ready to run whatever containers we wish to run on it.
@@ -845,7 +888,8 @@ We can now deploy Rook into the Kubernetes cluster. First, let's clone the Rook 
 $ git clone https://github.com/rook/rook.git
 
 ```
-
+tutorials:
+https://github.com/rook/rook/blob/master/Documentation/ceph-quickstart.md
 
 Change to the examples directory, as follows:
 
@@ -857,15 +901,51 @@ $ cd rook/cluster/examples/kubernetes/ceph/
 
 And now finally create the Rook-powered Ceph cluster by running the following two commands:
 
-```
+```bash
+$ kubectl create -f common.yaml 
+
+customresourcedefinition.apiextensions.k8s.io/cephclusters.ceph.rook.io created
+customresourcedefinition.apiextensions.k8s.io/cephfilesystems.ceph.rook.io created
+customresourcedefinition.apiextensions.k8s.io/cephnfses.ceph.rook.io created
+customresourcedefinition.apiextensions.k8s.io/cephobjectstores.ceph.rook.io created
+customresourcedefinition.apiextensions.k8s.io/cephobjectstoreusers.ceph.rook.io created
+customresourcedefinition.apiextensions.k8s.io/cephblockpools.ceph.rook.io created
+customresourcedefinition.apiextensions.k8s.io/volumes.rook.io created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-cluster-mgmt created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-cluster-mgmt-rules created
+role.rbac.authorization.k8s.io/rook-ceph-system created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-global created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-global-rules created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-mgr-cluster created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-mgr-cluster-rules created
+serviceaccount/rook-ceph-system created
+rolebinding.rbac.authorization.k8s.io/rook-ceph-system created
+clusterrolebinding.rbac.authorization.k8s.io/rook-ceph-global created
+serviceaccount/rook-ceph-osd created
+serviceaccount/rook-ceph-mgr created
+role.rbac.authorization.k8s.io/rook-ceph-osd created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-mgr-system created
+clusterrole.rbac.authorization.k8s.io/rook-ceph-mgr-system-rules created
+role.rbac.authorization.k8s.io/rook-ceph-mgr created
+rolebinding.rbac.authorization.k8s.io/rook-ceph-cluster-mgmt created
+rolebinding.rbac.authorization.k8s.io/rook-ceph-osd created
+rolebinding.rbac.authorization.k8s.io/rook-ceph-mgr created
+rolebinding.rbac.authorization.k8s.io/rook-ceph-mgr-system created
+clusterrolebinding.rbac.authorization.k8s.io/rook-ceph-mgr-cluster created
+
 
 $ kubectl create -f operator.yaml
 
-```
+deployment.apps/rook-ceph-operator created
+
 
 ```
+
+```bash
 
 $ kubectl create -f cluster.yaml
+
+cephcluster.ceph.rook.io/rook-ceph created
 
 ```
 
@@ -875,27 +955,103 @@ To confirm our Rook cluster is now working, let's check the running containers u
 
 $ kubectl get pods --all-namespaces -o wide
 
+NAMESPACE      NAME                                       READY   STATUS      RESTARTS   AGE     IP               NODE     NOMINATED NODE   READINESS GATES
+kube-system    calico-etcd-zxf69                          1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    calico-kube-controllers-866bb996d6-skhxr   1/1     Running     1          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    calico-node-2fkw6                          2/2     Running     2          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    calico-node-dxsvn                          2/2     Running     0          2d20h   192.168.57.162   k8s-n2   <none>           <none>
+kube-system    calico-node-fdg58                          2/2     Running     1          2d20h   192.168.57.161   k8s-n1   <none>           <none>
+kube-system    coredns-fb8b8dccf-dt9xk                    1/1     Running     0          2d20h   10.244.215.66    k8s-n1   <none>           <none>
+kube-system    coredns-fb8b8dccf-fb5cm                    1/1     Running     0          2d20h   10.244.215.65    k8s-n1   <none>           <none>
+kube-system    etcd-k8s-m1                                1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-apiserver-k8s-m1                      1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-controller-manager-k8s-m1             1/1     Running     1          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-flannel-ds-amd64-5kb47                1/1     Running     0          23m     192.168.57.161   k8s-n1   <none>           <none>
+kube-system    kube-flannel-ds-amd64-7rfns                1/1     Running     0          23m     192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-flannel-ds-amd64-v5t98                1/1     Running     0          23m     192.168.57.162   k8s-n2   <none>           <none>
+kube-system    kube-proxy-klkjx                           1/1     Running     0          2d20h   192.168.57.161   k8s-n1   <none>           <none>
+kube-system    kube-proxy-mxzwv                           1/1     Running     0          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kube-proxy-pfp84                           1/1     Running     0          2d20h   192.168.57.162   k8s-n2   <none>           <none>
+kube-system    kube-scheduler-k8s-m1                      1/1     Running     1          2d20h   192.168.57.160   k8s-m1   <none>           <none>
+kube-system    kubernetes-dashboard-5f7b999d65-l6cmh      1/1     Running     0          2d20h   10.244.42.131    k8s-m1   <none>           <none>
+rook-ceph      rook-ceph-agent-5ljpz                      1/1     Running     0          3m54s   192.168.57.161   k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-agent-wvlxj                      1/1     Running     0          3m53s   192.168.57.162   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-operator-775cf575c5-6dqh4        1/1     Running     0          3m55s   10.244.215.83    k8s-n1   <none>           <none>
+rook-ceph      rook-discover-bj9lr                        1/1     Running     0          3m53s   10.244.111.203   k8s-n2   <none>           <none>
+rook-ceph      rook-discover-f2lt6                        1/1     Running     0          3m53s   10.244.215.84    k8s-n1   <none>           <none>
 ```
 
 You will see that Rook has deployed a couple of mons and has also started some discover containers. These discover containers run a discovery script to locate storage devices attached to the Kubernetes physical host. Once the discovery process has completed for the first time, Kubernetes will then run a one-shot container to prepare the OSD by formatting the disk and adding the OSD into the cluster. If you wait a few minutes and re-run the get pods command, you should hopefully see that Rook has detected the two disks connected to kube2 and kube3 and created osd containers for them:
 
-To interact with the cluster, let's deploy the toolbox container; this is a simple container containing the Ceph installation and the necessary cluster keys:
+```bash
+
+rook-ceph      rook-ceph-agent-5ljpz                      1/1     Running     0          18m     192.168.57.161   k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-agent-wvlxj                      1/1     Running     0          18m     192.168.57.162   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-mgr-a-547bf56fdf-wvr9f           1/1     Running     0          13m     10.244.111.205   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-mon-a-66d969795f-qvl6l           1/1     Running     0          14m     10.244.215.87    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-mon-b-7557ffdd78-nsnhj           1/1     Running     0          13m     10.244.111.204   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-mon-c-6569b484f7-zqtdk           1/1     Running     0          13m     10.244.215.88    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-operator-775cf575c5-6dqh4        1/1     Running     0          18m     10.244.215.83    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-osd-prepare-k8s-n1-bkxj4         0/2     Completed   1          12m     10.244.215.89    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-osd-prepare-k8s-n2-vdfsg         0/2     Completed   0          12m     10.244.111.206   k8s-n2   <none>           <none>
+rook-ceph      rook-discover-bj9lr                        1/1     Running     0          18m     10.244.111.203   k8s-n2   <none>           <none>
+rook-ceph      rook-discover-f2lt6                        1/1     Running     0          18m     10.244.215.84    k8s-n1   <none>           <none>
+
 
 ```
 
+To interact with the cluster, let's deploy the toolbox container; this is a simple container containing the Ceph installation and the necessary cluster keys:
+
+
+```bash
+
 $ kubectl create -f toolbox.yaml
 
+deployment.apps/rook-ceph-tools created
 ```
 
 Now execute bash in the toolbox container:
 
-```
+```bash
 
-kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
+$ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
 
+bash: warning: setlocale: LC_CTYPE: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_COLLATE: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_MESSAGES: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_NUMERIC: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_TIME: cannot change locale (en_US.UTF-8): No such file or directory
+
+[root@k8s-n1 /]#
 ```
 
 This will present you with a root shell running inside the Ceph toolbox container, where we can check the status of the Ceph cluster by running ceph –s and see the current OSDs with ceph osd tree:
+
+```bash
+
+[root@k8s-n1 /]# ceph -s
+  cluster:
+    id:     7f302c9e-e57d-486f-bef3-e489a227166f
+    health: HEALTH_OK
+ 
+  services:
+    mon: 3 daemons, quorum a,b,c (age 29m)
+    mgr: a(active, since 28m)
+    osd: 0 osds: 0 up, 0 in
+ 
+  data:
+    pools:   0 pools, 0 pgs
+    objects: 0 objects, 0 B
+    usage:   0 B used, 0 B / 0 B avail
+    pgs:     
+ 
+[root@k8s-n1 /]#  ceph osd tree
+ceph osd tree
+ID CLASS WEIGHT TYPE NAME    STATUS REWEIGHT PRI-AFF 
+-1            0 root default 
+
+[root@k8s-n1 /]#  exit
+```
 
 You will notice that, although we built three VMs, Rook has only deployed OSDs on kube2 and kube3. This is because by default Kubernetes will not schedule containers to run on the master node; in a production cluster this is the desired behavior, but for testing we can remove this limitation.
 
@@ -913,12 +1069,28 @@ Run the following command, but replace the container name with the one that is l
 
 ```
 
-kubectl -n rook-ceph-system delete pods rook-ceph-operator-7dd46f4549-68tnk
+kubectl -n rook-ceph-system delete pods rook-ceph-operator-775cf575c5-6dqh4    
 
 ```
 
 Kubernetes will now automatically spin up a new rook-ceph-operator container and in doing so will kick-start the deployment of the new osd; this can be confirmed by looking at the list of running containers again:
 
+```bash
+
+rook-ceph      rook-ceph-agent-5ljpz                      1/1     Running     0          42m     192.168.57.161   k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-agent-wvlxj                      1/1     Running     0          42m     192.168.57.162   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-mgr-a-547bf56fdf-wvr9f           1/1     Running     0          37m     10.244.111.205   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-mon-a-66d969795f-qvl6l           1/1     Running     0          38m     10.244.215.87    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-mon-b-7557ffdd78-nsnhj           1/1     Running     0          38m     10.244.111.204   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-mon-c-6569b484f7-zqtdk           1/1     Running     0          37m     10.244.215.88    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-operator-775cf575c5-6dqh4        1/1     Running     0          42m     10.244.215.83    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-osd-prepare-k8s-n1-bkxj4         0/2     Completed   1          36m     10.244.215.89    k8s-n1   <none>           <none>
+rook-ceph      rook-ceph-osd-prepare-k8s-n2-vdfsg         0/2     Completed   0          36m     10.244.111.206   k8s-n2   <none>           <none>
+rook-ceph      rook-ceph-tools-b8c679f95-f8f6p            1/1     Running     0          10m     192.168.57.161   k8s-n1   <none>           <none>
+rook-ceph      rook-discover-bj9lr                        1/1     Running     0          42m     10.244.111.203   k8s-n2   <none>           <none>
+rook-ceph      rook-discover-f2lt6                        1/1     Running     0          42m     10.244.215.84    k8s-n1   <none>           <none>
+
+```
 
 You can see kube1 has run a rook-discover container, a rook-ceph-osd-prepare, and finally a rook-ceph-osd container, which in this case is osd number 2.
 
@@ -937,10 +1109,43 @@ Exit the text editor and now deploy the CephFS configuration in the yaml file:
 ```
 
 $ kubectl create -f filesystem.yaml
-
+cephfilesystem.ceph.rook.io/myfs created
 ```
 
 Now let's jump back into our toolbox container, check the status, and see what's been created:
+
+```bash
+
+[vagrant@k8s-m1 ceph]$ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
+bash: warning: setlocale: LC_CTYPE: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_COLLATE: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_MESSAGES: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_NUMERIC: cannot change locale (en_US.UTF-8): No such file or directory
+bash: warning: setlocale: LC_TIME: cannot change locale (en_US.UTF-8): No such file or directory
+[root@k8s-n1 /]# ceph -s
+  cluster:
+    id:     7f302c9e-e57d-486f-bef3-e489a227166f
+    health: HEALTH_OK
+ 
+  services:
+    mon: 3 daemons, quorum a,b,c (age 40m)
+    mgr: a(active, since 39m)
+    mds: myfs:1 {0=myfs-a=up:creating} 1 up:standby-replay
+    osd: 0 osds: 0 up, 0 in
+ 
+  data:
+    pools:   2 pools, 200 pgs
+    objects: 0 objects, 0 B
+    usage:   0 B used, 0 B / 0 B avail
+    pgs:     100.000% pgs unknown
+             200 unknown
+ 
+[root@k8s-n1 /]# ceph osd  lspools
+1 myfs-metadata
+2 myfs-data0
+
+
+```
 
 We can see that two pools have been created, one for the CephFS metadata and one for the actual data stored on the CephFS filesystem.
 
@@ -953,28 +1158,40 @@ Place the following inside a file called nginx.yaml:
 apiVersion: v1
 kind: Pod
 metadata:
- name: nginx
+  name: nginx
+  labels:
+    app: web
 spec:
- containers:
- - name: nginx
- image: nginx:1.7.9
- ports:
- - containerPort: 80
- volumeMounts:
- - name: www
- mountPath: /usr/share/nginx/html
- volumes:
- - name: www
- flexVolume:
- driver: ceph.rook.io/rook
- fsType: ceph
- options:
- fsName: myfs
- clusterNamespace: rook-ceph
+  containers:
+    - name: nginx
+      image: nginx:1.7.9
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: www   
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: www
+      flexVolume:
+      driver: "ceph.rook.io/rook"
+      fsType: "ceph"
+      options:
+        fsName: "myfs"
+        clusterNamespace: "rook-ceph"rook-ceph
 
 ```
+ps.  You can validate the yaml  https://kubeyaml.com/
+
 And now use the kubectl command to create the pod/nginx:
 
+```bash
+
+[vagrant@k8s-m1 ~]$ kubectl get pods 
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx                               1/1     Running   0          48s
+
+
+```
 
 
 After a while, the container will be started and will enter a running state; use the get pods command to verify this:
@@ -985,8 +1202,61 @@ We can now start a quick Bash shell on this container to confirm the CephFS moun
 
 ```
 
-$ kubectl exec -it nginx bash
+[vagrant@k8s-m1 ~]$ kubectl exec -it nginx bash
+
+root@nginx:/# df -H
+
+Filesystem               Size  Used Avail Use% Mounted on
+rootfs                    44G  6.5G   38G  15% /
+overlay                   44G  6.5G   38G  15% /
+tmpfs                     68M     0   68M   0% /dev
+tmpfs                    1.6G     0  1.6G   0% /sys/fs/cgroup
+/dev/mapper/centos-root   44G  6.5G   38G  15% /dev/termination-log
+shm                       68M     0   68M   0% /dev/shm
+/dev/mapper/centos-root   44G  6.5G   38G  15% /etc/resolv.conf
+/dev/mapper/centos-root   44G  6.5G   38G  15% /etc/hostname
+/dev/mapper/centos-root   44G  6.5G   38G  15% /etc/hosts
+/dev/mapper/centos-root   44G  6.5G   38G  15% /var/cache/nginx
+/dev/mapper/centos-root   44G  6.5G   38G  15% /usr/share/nginx/html
+tmpfs                    1.6G   13k  1.6G   1% /run/secrets/kubernetes.io/serviceaccount
+tmpfs                    1.6G     0  1.6G   0% /proc/acpi
+tmpfs                     68M     0   68M   0% /proc/kcore
+tmpfs                     68M     0   68M   0% /proc/keys
+tmpfs                     68M     0   68M   0% /proc/timer_list
+tmpfs                     68M     0   68M   0% /proc/timer_stats
+tmpfs                     68M     0   68M   0% /proc/sched_debug
+tmpfs                    1.6G     0  1.6G   0% /proc/scsi
+tmpfs                    1.6G     0  1.6G   0% /sys/firmware
+root@nginx:/# 
 
 ```
 
 We can see that the CephFS filesystem has been mounted into /usr/share/nginx/html. This has been done without having to install any Ceph components in the container and without any configuration or copying of key rings. Rook has taken care of all of this behind the scenes; once this is understood and appreciated, the real power of Rook can be seen. If the simple NGINX pod example is expanded to become an auto-scaling service that spins up multiple containers based on load, the flexibility given by Rook and Ceph to automatically present the same shared storage across the web farm with no additional configuration is very useful.
+
+
+##  Delete the Operator and related Resources
+https://github.com/rook/rook/blob/master/Documentation/ceph-teardown.md
+
+```bash
+
+kubectl delete -f operator.yaml
+kubectl delete -f common.yaml
+
+
+```
+
+##  Summary
+
+In this chapter, you learned about Ceph's various deployment methods and the differences between them. You will now also have a basic understanding of how Ansible works and how to deploy a Ceph cluster with it. It would be advisable at this point to continue investigating and practicing the deployment and configuration of Ceph with Ansible, so that you are confident enough to use it in production environments. The remainder of this book will also assume that you have fully understood the contents of this chapter in order to manipulate the configuration of Ceph.
+
+You have also learned about the exciting new developments in deploying Ceph in containers running on the Kubernetes platform. Although the Rook project is still in the early stages of development, it is clear it is already a very powerful tool that will enable Ceph to function to the best of its ability while at the same time simplifying the deployment and administration required. With the continued success enjoyed by Kubernetes in becoming the recommended container management platform, integrating Ceph with the use of Rook will result in a perfect match of technologies.
+
+It is highly recommended that the reader should continue to learn further about Kubernetes as this chapter has only scratched the surface of the functionality it offers. There are strong signs across the industry that containerization is going to be the technology for deploying and managing applications and having an understanding of both Kubernetes and how Ceph integrates with Rook is highly recommended.
+
+## Questions
+
+1. What piece of software can be used to rapidly deploy test environments?
+1. Should vagrant be used to deploy production environments?
+1. What project enables the deployment of Ceph on top of Kubernetes?
+1. What is Docker?
+1. What is the Ansible file called which is used to run a series of commands?
