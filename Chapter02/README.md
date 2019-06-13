@@ -439,7 +439,10 @@ vagrant@ansible:~/ceph-ansible$ git checkout stable-3.2
 ```
 
 vagrant@ansible:~$  sudo cp -a ceph-ansible/* /etc/ansible/
-vagrant@ansible:~$  sudo apt-get install python-pip
+vagrant@ansible:~$  export LCi_ALL="en_US.UTF-8"
+vagrant@ansible:~$  export LC_CTYPE="en_US.UTF-8"
+vagrant@ansible:~$  sudo dpkg-reconfigure locales
+vagrant@ansible:~$  sudo apt-get install -y  python-pip
 vagrant@ansible:~$  sudo pip install notario netaddr
 
 ```
@@ -605,7 +608,11 @@ vagrant@ansible:/etc/ansible$ ansible-playbook -K site.yml
 
 Once done, assuming Ansible completed without errors, SSH into mon1 and run the following code. If Ansible did encounter errors, scroll up and look for the part which errored, the error text should give you a clue as to why it failed.
 
-vagrant@mon1:~$ sudo ceph -s:
+```bash
+
+vagrant@mon1:~$ sudo ceph -s
+
+```
 
 其他參考: https://github.com/ceph/ceph-ansible
 
@@ -1260,3 +1267,4 @@ It is highly recommended that the reader should continue to learn further about 
 1. What project enables the deployment of Ceph on top of Kubernetes?
 1. What is Docker?
 1. What is the Ansible file called which is used to run a series of commands?
+
